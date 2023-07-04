@@ -1,0 +1,16 @@
+[package]
+name = "bake"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+quote = "1.0.23"
+syn = "1.0.107"
+bake_macro = {path="bake_macro"}
+proc-macro2 = "1.0.51"
+nom = { version = "7.1.3", optional = false}
+
+[features]
+allow_pointers = []

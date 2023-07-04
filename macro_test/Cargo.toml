@@ -1,0 +1,16 @@
+[package]
+name = "macro_test"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+bake = {path=".."}
+proc-macro2 = "1.0.51"
+quote = "1.0.23"
+syn = "1.0.107"
+lib_test = {path="file://../../lib_test", features=["macro"]}
+
+[lib]
+proc-macro=true
