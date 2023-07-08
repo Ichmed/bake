@@ -21,8 +21,6 @@ pub mod util {
     pub use quote::{quote, ToTokens};
 }
 
-//TODO: https://doc.rust-lang.org/std/cell/index.html needs implementing
-
 pub trait Bake {
     /// Return a TokenStream the produces an equivalent struct
     fn to_stream(&self) -> TokenStream;
