@@ -1,5 +1,5 @@
 [package]
-name = "macro_test"
+name = "parse_macro"
 version = "0.1.0"
 edition = "2021"
 
@@ -10,7 +10,7 @@ bake = {path="../../../lib"}
 proc-macro2 = "1.0.51"
 quote = "1.0.23"
 syn = "1.0.107"
-lib_test = {path="file://../../lib_test", features=["macro"]}
+lib = {path="file://../../lib", features=["macro"]}
 
 [lib]
 proc-macro=true

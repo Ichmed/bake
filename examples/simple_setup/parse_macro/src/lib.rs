@@ -1,5 +1,5 @@
 use bake::{interpolation::*, Bakeable, util::quote};
-use lib_test::*;
+use lib::*;
 
 
 #[proc_macro]

@@ -24,7 +24,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "lib_test"
+name = "lib"
 version = "0.1.0"
 dependencies = [
  "bake",
@@ -34,23 +34,12 @@ dependencies = [
 ]
 
 [[package]]
-name = "macro_test"
+name = "main"
 version = "0.1.0"
 dependencies = [
  "bake",
- "lib_test",
- "proc-macro2",
- "quote",
- "syn 1.0.109",
-]
-
-[[package]]
-name = "main_test"
-version = "0.1.0"
-dependencies = [
- "bake",
- "lib_test",
- "macro_test",
+ "lib",
+ "parse_macro",
 ]
 
 [[package]]
@@ -73,6 +62,17 @@ checksum = "d273983c5a657a70a3e8f2a01329822f3b8c8172b73826411a55751e404a0a4a"
 dependencies = [
  "memchr",
  "minimal-lexical",
+]
+
+[[package]]
+name = "parse_macro"
+version = "0.1.0"
+dependencies = [
+ "bake",
+ "lib",
+ "proc-macro2",
+ "quote",
+ "syn 1.0.109",
 ]
 
 [[package]]

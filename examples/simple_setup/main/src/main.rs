@@ -1,6 +1,6 @@
 use bake::{Bakeable, bake_fn_once};
-use lib_test::*;
-use macro_test::{self, parse_node, test_bake_macro};
+use lib::*;
+use parse_macro::{self, parse_node, test_bake_macro};
 
 fn main() {
     let test = false;
