@@ -8,4 +8,4 @@ edition = "2021"
 [dependencies]
 macro_test = {path="file://../../macro_test"}
 lib_test = {path="file://../../lib_test"}
-bake = {path=".."}
+bake = {path="../../../lib"}

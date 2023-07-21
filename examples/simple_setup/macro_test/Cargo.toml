@@ -6,7 +6,7 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-bake = {path=".."}
+bake = {path="../../../lib"}
 proc-macro2 = "1.0.51"
 quote = "1.0.23"
 syn = "1.0.107"

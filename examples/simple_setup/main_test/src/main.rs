@@ -31,6 +31,7 @@ fn main() {
     println!("{}", x.bake().to_string());
 
     println!("{}", Ipol {field_a: 10, field_b: 10}.bake().to_string());
+
 }
 
 fn test_function(input: u64) -> u64 {
