@@ -3,9 +3,6 @@ use parse_macro::json;
 
 fn main() {
     let x: Vec<Json> = vec![10.into(), 20.into(), "test".into()];
-    let y = "test";
-
-    // let j: Json = x.clone().into();
 
     let nested = json!(
         {
@@ -14,7 +11,6 @@ fn main() {
         }
     );
 
-    // sql!(SELECT * FROM table WHERE name = ${name});
 
     println!("{}", nested.as_json());
 
@@ -29,5 +25,4 @@ fn main() {
     };
 
     println!("{}", node.as_json());
-    // println!("{:?}", node);
 }
