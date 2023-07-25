@@ -162,7 +162,7 @@ fn field_conversion((index, field): (usize, &Field)) -> proc_macro2::TokenStream
     if let Some(alias) = bake_as.clone() {
         if field.ty == Type::Path(TypePath { qself: None, path: alias }) {
             let u = &field.ty;
-            return quote!(let #ident = quote!(#u););
+            return quote!(let #ident = bake::util::quote!(#u););
         }
     }
 
@@ -214,7 +214,7 @@ fn enum_variants(ident: &Ident, alias: Option<Path>, data: &DataEnum) -> Vec<pro
                     Self :: #var_ident #destructured => {
                         #conversion
     
-                        quote!(#alias :: #var_ident #restructured)
+                        bake::util::quote!(#alias :: #var_ident #restructured)
                     }                
 
                 },
@@ -225,7 +225,7 @@ fn enum_variants(ident: &Ident, alias: Option<Path>, data: &DataEnum) -> Vec<pro
                             #conversion
                             let #path: bake::util::Path = bake::util::parse_str(module_path!()).unwrap();
 
-                            quote!(##path :: #ident :: #var_ident #restructured)
+                            bake::util::quote!(##path :: #ident :: #var_ident #restructured)
                         }
                     }
                 },

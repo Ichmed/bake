@@ -16,7 +16,7 @@ macro_rules! impl_operator {
                     let lhs = lhs.bake();
                     let rhs = rhs.bake();
                     let joined: TokenTree = parse2(quote!(#lhs.$mthod(#rhs))).unwrap();
-                    Interpolation(joined)
+                    Inter(joined)
                 }
             }
         }

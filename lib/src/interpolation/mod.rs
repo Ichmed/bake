@@ -16,9 +16,26 @@ pub mod helper;
 
 #[derive(Debug, Clone)]
 pub enum Interpolatable<T> {
-    Interpolation(TokenTree),
+    Inter(TokenTree),
     Actual(T),
 }
+
+impl<T> Interpolatable<T> {
+    /// Adds conversion via `into` to the stream and wraps it into a tree
+    pub fn new_inter(stream: TokenStream) -> Self {
+        Self::Inter(parse_quote!({{#stream}.into()}))
+    }
+
+    /// Uses the TokenTree as-is for interpolation
+    /// 
+    /// You have to take care of type conversion manually
+    pub fn new_inter_raw(tree: TokenTree) -> Self {
+        Self::Inter(parse_quote!(#tree.into()))
+    }
+}
+
+// create `new` method that wraps the stream in a tree and adds .into()
+// create secondary new without into for from iterator
 
 impl<T: Bake + PartialEq> PartialEq for Interpolatable<T> {
     fn eq(&self, other: &Self) -> bool {
@@ -47,10 +64,7 @@ trait UnwrapInterpolation<T> {
 impl<T: Bake> Bakeable for Interpolatable<T> {
     fn bake(&self) -> TokenStream {
         match self {
-            Interpolatable::Interpolation(tree) => {
-                let stream = tree.to_token_stream();
-                quote!(#stream.into())
-            }
+            Interpolatable::Inter(tree) => tree.to_token_stream(),
             Interpolatable::Actual(t) => t.to_stream(),
         }
     }
@@ -72,7 +86,7 @@ impl<T: Bake> Interpolate<T> for Interpolatable<T> {
     fn fit(self) -> Result<T, RuntimeInterpolationError> {
         match self {
             Interpolatable::Actual(t) => Ok(t),
-            Interpolatable::Interpolation(tree) => Err(RuntimeInterpolationError(tree)),
+            Interpolatable::Inter(tree) => Err(RuntimeInterpolationError(tree)),
         }
     }
 }
@@ -81,7 +95,7 @@ impl<'a, T: Bake> Interpolate<&'a T> for &'a Interpolatable<T> {
     fn fit(self) -> Result<&'a T, RuntimeInterpolationError> {
         match self {
             Interpolatable::Actual(t) => Ok(t),
-            Interpolatable::Interpolation(tree) => Err(RuntimeInterpolationError(tree.clone())),
+            Interpolatable::Inter(tree) => Err(RuntimeInterpolationError(tree.clone())),
         }
     }
 }
@@ -112,7 +126,7 @@ impl<T: Bake> From<T> for Interpolatable<T> {
 
 impl<T> From<TokenTree> for Interpolatable<T> {
     fn from(value: TokenTree) -> Self {
-        Self::Interpolation(value)
+        Self::Inter(value)
     }
 }
 
@@ -126,11 +140,11 @@ pub trait IntoInterpolation
 where
     Self: Sized + Bake,
 {
-    fn into_interpolation(self) -> Interpolatable<Self>;
+    fn interpolate(self) -> Interpolatable<Self>;
 }
 
 impl<T: Bake> IntoInterpolation for T {
-    fn into_interpolation(self) -> Interpolatable<Self> {
+    fn interpolate(self) -> Interpolatable<Self> {
         Interpolatable::Actual(self)
     }
 }
@@ -152,7 +166,7 @@ impl<B: Bake> From<Vec<Interpolatable<B>>> for Interpolatable<Vec<B>> {
 
         for element in value {
             match element {
-                Interpolation(tree) => {
+                Inter(tree) => {
                     if result.is_none() {
                         let mut v = Vec::with_capacity(visited.len());
                         v.extend(visited.iter().map(|b| b.to_token_tree()));
@@ -168,7 +182,7 @@ impl<B: Bake> From<Vec<Interpolatable<B>>> for Interpolatable<Vec<B>> {
         }
 
         match result {
-            Some(list) => Interpolation(parse_quote!({vec![#(#list.into(),)*]})),
+            Some(list) => Inter(parse_quote!({vec![#(#list.into(),)*]})),
             None => Actual(visited),
         }
     }
@@ -185,13 +199,13 @@ impl<B: Bake, Collection: FromIterator<B>> FromIterator<Interpolatable<B>> for I
 
         for element in iter {
             match element {
-                Interpolation(tree) => {
+                Inter(tree) => {
                     if result.is_none() {
                         let mut v = Vec::with_capacity(visited.len());
                         v.extend(visited.iter().map(|b| b.to_token_tree()));
                         result = Some(v);
                     }
-                    result.as_mut().unwrap().push(tree);
+                    result.as_mut().unwrap().push(parse_quote!({#tree.into()}));
                 },
                 Actual(item) => match result.as_mut() {
                     Some(vec) => vec.push(item.to_token_tree()),
@@ -201,7 +215,7 @@ impl<B: Bake, Collection: FromIterator<B>> FromIterator<Interpolatable<B>> for I
         }
 
         match result {
-            Some(list) => Interpolation(parse_quote!({FromIterator::from_iter(vec![#(#list.into(),)*])})),
+            Some(list) => Inter(parse_quote!({FromIterator::from_iter([#(#list,)*])})),
             None => Actual(FromIterator::from_iter(visited)),
         }
     }
@@ -219,23 +233,23 @@ impl<T: Bake> Interpolatable<T> {
         use Interpolatable::*;
         match self {
             Actual(inner) => Actual(f.call(inner)),
-            Interpolation(tree) => {
+            Inter(tree) => {
                 let function_path = f.bake();
-                Interpolation(parse2(quote!(#function_path(#tree.into()))).unwrap())
+                Inter(parse2(quote!(#function_path(#tree.into()))).unwrap())
             },
         }
     }
 
     pub fn actual(self) -> Option<T> {
         match self {
-            Interpolatable::Interpolation(_) => None,
+            Interpolatable::Inter(_) => None,
             Interpolatable::Actual(t) => Some(t),
         }
     }
 
     pub fn tree(self) -> Option<TokenTree> {
         match self {
-            Interpolatable::Interpolation(tree) => Some(tree),
+            Interpolatable::Inter(tree) => Some(tree),
             Interpolatable::Actual(_) => None,
         }
     }

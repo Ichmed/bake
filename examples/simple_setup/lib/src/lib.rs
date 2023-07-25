@@ -6,6 +6,8 @@ use bake::{
     util::TokenTree
 };
 
+pub mod json;
+
 #[derive(Debug, Bake)]
 pub struct Test {
     pub zahl: u32,
@@ -129,13 +131,13 @@ impl From<syn::Error> for NodeError {
 }
 
 #[derive(Bake, Debug, PartialEq)]
-#[bake(interpolate, to_tokens)]
+#[bake(to_tokens)]
 pub enum Json {
     Number(i64),
     Boolean(bool),
     String(String),
-    List(Vec<Json>),
-    Dict(HashMap<String, Box<Json>>)
+    #[interpolate] List(Vec<Json>),
+    #[interpolate] Dict(HashMap<String, Box<Json>>)
 }
 
 #[cfg(not(feature = "macro"))]
@@ -191,7 +193,7 @@ fn parse_list(tokens: &str) -> Result<Interpolatable<Json>, NodeError> {
 
 fn parse_interpolation(tokens: &str) -> Result<Interpolatable<Json>, NodeError> {
     let tokens = tokens.strip_prefix("$").ok_or(NodeError::Parsing)?;
-    Ok(Interpolatable::<Json>::Interpolation(syn::parse_str::<TokenTree>(tokens)?))
+    Ok(Interpolatable::<Json>::Inter(syn::parse_str::<TokenTree>(tokens)?))
 }
 
 pub struct PartialTuple(
