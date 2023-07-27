@@ -54,7 +54,7 @@ dependencies = [
 
 [[package]]
 name = "struct_baker"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "nom",
  "proc-macro2",
@@ -65,7 +65,7 @@ dependencies = [
 
 [[package]]
 name = "struct_baker_derive"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "proc-macro2",
  "quote",
