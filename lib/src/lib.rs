@@ -11,7 +11,7 @@ pub mod pointers;
 pub mod time;
 pub mod functions;
 
-pub use bake_macro::*;
+pub use struct_baker_derive::*;
 
 pub mod interpolation;
 

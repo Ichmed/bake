@@ -1,5 +1,5 @@
 [package]
-name = "bake_macro"
+name = "struct_baker_derive"
 version = "0.1.0"
 edition = "2021"
 

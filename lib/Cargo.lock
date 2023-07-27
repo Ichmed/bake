@@ -3,16 +3,6 @@
 version = 3
 
 [[package]]
-name = "bake_macro"
-version = "0.1.0"
-dependencies = [
- "proc-macro2",
- "quote",
- "snailquote",
- "syn 1.0.109",
-]
-
-[[package]]
 name = "memchr"
 version = "2.5.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -66,10 +56,20 @@ dependencies = [
 name = "struct_baker"
 version = "0.1.0"
 dependencies = [
- "bake_macro",
  "nom",
  "proc-macro2",
  "quote",
+ "struct_baker_derive",
+ "syn 1.0.109",
+]
+
+[[package]]
+name = "struct_baker_derive"
+version = "0.1.0"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "snailquote",
  "syn 1.0.109",
 ]
 
