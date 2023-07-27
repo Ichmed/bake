@@ -10,7 +10,7 @@ license = "MIT"
 [dependencies]
 quote = "1.0.23"
 syn = "1.0.107"
-struct_baker_derive = { version = "*", path = "bake_macro" }
+struct_baker_derive = { version = "0.1.0", path = "bake_macro" }
 proc-macro2 = "1.0.51"
 nom = { version = "7.1.3", optional = true }
 
