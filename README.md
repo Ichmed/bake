@@ -14,6 +14,8 @@ fn main() {
 }
 ```
 
+For a more elaborate example see examples/simple_setup
+
 ### Quick Feature and Usecase List
 - Generate a parsing macro from your existing parsing function
 - Use DSLs (Domain Specific Languages) inside hot loops by off-loading parsing to compile time
@@ -172,6 +174,8 @@ fn wrap_my_number(number: i32) -> Json {
 }
 ```
 Please note that the `${...}` syntax is something you have to implement in your parser, this crate only gives you the framework to bake the interpolation, not to parse them. The macro above will expand to something like this
+
+See the examples directory for an example on how to do that.
 ```rust
 Json::Map(
     std::collections::HashMap::from(
@@ -207,6 +211,23 @@ pub enum Json {
     Dict(HashMap<String, Box<Json>>)
 }
 ```
+
+You can also only interpolate certain fields, in the case of a JSON it doesn't really make sense to interpolate more than List and Dict
+
+```rust
+#[derive(Bake, Debug, PartialEq)]
+#[bake]
+pub enum Json {
+    Number(i64),
+    Boolean(bool),
+    String(String),
+    #[interpolate]
+    List(Vec<Json>),
+    #[interpolate]
+    Dict(HashMap<String, Json>),
+}
+```
+
 Interacting with the struct becomes a bit trickier though: For the user of your crate not much changes apart from being able to interpolate, but you now have to make sure that all your code works whether you are interpolating or not.
 
 ### The 'macro' feature
@@ -214,15 +235,15 @@ Marking any type as interpolated implicitly adds the 'macro' feature to your cra
 
 When the macro feature is turned on all interpolated fields `field: T` become `field: Interpolatable<T>` instead. `Interpolatable<T>` is an enum with two variants: 
 - `Actual(T)` represents an actual value of type `T` and gets baked the same way `T` would
-- `Interpolation(TokenTree)` represents a rust block that ***should*** evaluate to a type the implements `Into<T>` and gets backed as `{/*TokenTree here*/}.into()`
+- `Interpolation(TokenTree)` represents a rust block that ***should*** evaluate to a type the implements `Into<T>` and gets baked as `{/*TokenTree here*/}.into()`
 
 Creating a `Interpolatable::<T>::Interpolation` that can not be converted into a `T` with `into()` will produce a compiler error when calling the macro.
 
 ### Adjusting code
 You will have the following changes to your code:
-- parsing functions that _may_ return an interpolated value need there return type from `T` to `Interpolatable<T>`
+- parsing functions that _may_ return an interpolated value need their return type changed from `T` to `Interpolatable<T>`
 - Struct constructors from parsing functions need to call `.fit()?` on all fields. This will convert betweeen `T` and `Interpolatable<T>` as needed.
-- Your parsing errors need to implement `From<bake::RuntimeInterpolationError>` in order for `.fit()?` to work
+- Your parsing errors need to implement `From<bake::RuntimeInterpolationError>` in order for `.fit()?` to work (this is already done for nom errors if you enable the `nom` feature)
 - Guard all functions that need to work on a raw `T` by
   - using `fit()?` or `force_fit()`
     ```rust
