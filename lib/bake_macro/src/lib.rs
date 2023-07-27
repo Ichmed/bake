@@ -34,8 +34,8 @@ pub fn bake_new(args: TokenStream, input: TokenStream) -> TokenStream {
 
         #base
 
-        impl #generics bake::Bake for #ident #generics {
-            fn to_stream(&self) -> bake::util::TokenStream {
+        impl #generics struct_baker::Bake for #ident #generics {
+            fn to_stream(&self) -> struct_baker::util::TokenStream {
                 #imp.into()
             }
         }
@@ -55,7 +55,7 @@ fn determine_constructr_arguments(
                 let fields: Vec<_> = x.fields.into_iter().map(|f| f.ident).collect();
                 quote! {
                     #(let #fields = self.#fields.bake();)*
-                    bake::util::quote!(
+                    struct_baker::util::quote!(
                         #ident::new(#(# #fields),*)
                     )
                 }
@@ -158,8 +158,8 @@ fn to_tokens(input: BakeInfo) -> proc_macro2::TokenStream {
     } = input;
     
     quote!(
-        impl #generics bake::util::ToTokens for #path #generics {
-            fn to_tokens(&self, tokens: &mut bake::util::TokenStream) {
+        impl #generics struct_baker::util::ToTokens for #path #generics {
+            fn to_tokens(&self, tokens: &mut struct_baker::util::TokenStream) {
                 tokens.extend(self.bake())
             }
         }
@@ -205,6 +205,6 @@ pub fn bake_fn_once(input: TokenStream) -> TokenStream {
     let path = parse_macro_input!(input as Path);
 
     quote!({
-        bake::functions::BakeableFnOnce::_new(#path, bake::util::parse_quote!(#path))
+        struct_baker::functions::BakeableFnOnce::_new(#path, struct_baker::util::parse_quote!(#path))
     }).into()
 }

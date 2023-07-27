@@ -1,4 +1,4 @@
-use lib::json::Json;
+use lib::Json;
 use parse_macro::json;
 
 fn main() {

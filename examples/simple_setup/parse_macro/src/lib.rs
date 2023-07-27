@@ -1,5 +1,5 @@
-use bake::Bakeable;
-use lib::json::parse_json_node;
+use struct_baker::Bakeable;
+use lib::parse_json_node;
 
 
 
@@ -15,5 +15,5 @@ pub fn json(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
 
     let inner = inner.bake();
 
-    bake::util::quote!(#inner).into()
+    struct_baker::util::quote!(#inner).into()
 }

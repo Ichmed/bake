@@ -3,17 +3,6 @@
 version = 3
 
 [[package]]
-name = "bake"
-version = "0.1.0"
-dependencies = [
- "bake_macro",
- "nom",
- "proc-macro2",
- "quote",
- "syn 1.0.109",
-]
-
-[[package]]
 name = "bake_macro"
 version = "0.1.0"
 dependencies = [
@@ -36,11 +25,11 @@ dependencies = [
 name = "lib"
 version = "0.1.0"
 dependencies = [
- "bake",
  "nom",
  "parse-hyperlinks",
  "proc-macro2",
  "quote",
+ "struct_baker",
  "syn 1.0.109",
 ]
 
@@ -110,6 +99,17 @@ checksum = "ec62a949bda7f15800481a711909f946e1204f2460f89210eaf7f57730f88f86"
 dependencies = [
  "thiserror",
  "unicode_categories",
+]
+
+[[package]]
+name = "struct_baker"
+version = "0.1.0"
+dependencies = [
+ "bake_macro",
+ "nom",
+ "proc-macro2",
+ "quote",
+ "syn 1.0.109",
 ]
 
 [[package]]

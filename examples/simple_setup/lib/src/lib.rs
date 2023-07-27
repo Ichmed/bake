@@ -1,134 +1,15 @@
 use std::collections::HashMap;
 
-use bake::{
-    interpolation::{Interpolatable, Interpolate, RuntimeInterpolationError},
-    *,
-    util::TokenTree
-};
+use struct_baker::interpolation::{Interpolate, IntoInterpolation, RuntimeInterpolationError};
+use struct_baker::{bake, interpolation::{Interpolatable, FlattenInterpolation}, Bake, Bakeable};
+use nom::branch::alt;
+use nom::character::complete::{alphanumeric0, alphanumeric1, char, digit1};
+use nom::combinator::map_res;
+use nom::multi::{many0, separated_list0};
+use nom::sequence::delimited;
+use nom::IResult;
 
-pub mod json;
-
-#[derive(Debug, Bake)]
-pub struct Test {
-    pub zahl: u32,
-    pub wahrheit: bool,
-}
-
-#[derive(Bake)]
-pub struct PubTest {
-    pub zahl: u32,
-    pub wahrheit: bool,
-}
-
-#[derive(Bake)]
-pub enum EnumTest {
-    StructVariant { a: u32, b: bool },
-    TupleVariant(u32, bool),
-    UnitVarient,
-}
-
-#[bake]
-pub enum InterpolatedEnumTest {
-    StructVariant { a: u32, b: bool },
-    TupleVariant(u32, bool),
-    UnitVariant,
-}
-
-impl InterpolatedEnumTest {
-    fn _test(self) {
-        match self {
-            InterpolatedEnumTest::StructVariant { a: _, b: _ } => todo!(),
-            InterpolatedEnumTest::TupleVariant(_, _) => todo!(),
-            InterpolatedEnumTest::UnitVariant => todo!(),
-        };
-    }
-}
-
-#[bake]
-#[derive(Bake, Debug)]
-pub enum InterpolatedEnum {
-    Integer(i64),
-    String(String),
-}
-
-#[derive(Bake, Debug)]
-pub struct WithInterpolatedField {
-    pub name: String,
-    pub value: InterpolatedEnum,
-}
-
-impl From<i64> for InterpolatedEnum {
-    fn from(value: i64) -> Self {
-        InterpolatedEnum::Integer(value.force_fit())
-    }
-}
-
-impl From<String> for InterpolatedEnum {
-    fn from(value: String) -> Self {
-        InterpolatedEnum::String(value.force_fit())
-    }
-}
-
-impl Test {
-    pub fn new(wahrheit: bool, zahl: u32) -> Self {
-        Self { wahrheit, zahl }
-    }
-}
-
-// #[derive(Bake)]
-pub struct NestTest {
-    pub test: Test,
-    pub tupel: TupleStruct,
-    pub unit: UnitStruct,
-}
-
-// #[derive(Bake)]
-pub struct TupleStruct(pub u8, pub u32);
-
-#[derive(Bake)]
-pub struct UnitStruct;
-
-
-
-
-// Interpolation is off by default
-#[derive(Bake, Debug)]
-#[bake(interpolate, bake_as(Test))] //Turn on interpolation for all fields
-pub struct Ipol {
-    pub field_a: u64,
-    #[interpolate] //Defaults to true
-    pub field_b: u64,
-}
-
-pub struct UnbakedUnit;
-
-#[derive(Bake)]
-pub struct WithUnbakedUnit(#[bake_via(UnbakedUnit)] pub UnbakedUnit);
-
-// #[cfg(not(feature = "macro"))]
-// impl Ipol {
-//     fn do_a_thing(&self) {
-//         self.field_a.clone() + self.field_b.clone();
-//     }
-// }
-
-#[derive(Debug, PartialEq)]
-pub enum NodeError {
-    Interpolation,
-    Parsing,
-}
-
-impl From<RuntimeInterpolationError> for NodeError {
-    fn from(_: RuntimeInterpolationError) -> Self {
-        NodeError::Interpolation
-    }
-}
-
-impl From<syn::Error> for NodeError {
-    fn from(_: syn::Error) -> Self {
-        NodeError::Parsing
-    }
-}
+use parse_hyperlinks::take_until_unbalanced;
 
 #[derive(Bake, Debug, PartialEq)]
 #[bake(to_tokens)]
@@ -136,68 +17,169 @@ pub enum Json {
     Number(i64),
     Boolean(bool),
     String(String),
-    #[interpolate] List(Vec<Json>),
-    #[interpolate] Dict(HashMap<String, Box<Json>>)
+    #[interpolate]
+    List(Vec<Json>),
+    #[interpolate]
+    Dict(HashMap<String, Json>),
 }
 
-#[cfg(not(feature = "macro"))]
 impl Json {
-    pub fn truthyness(&self) -> bool{
+    pub fn as_json(&self) -> String {
         match self {
-            Json::Number(x) => *x != 0,
-            Json::Boolean(x) => *x,
-            Json::String(x) => x.len() > 0,
-            Json::List(x) => !x.is_empty(),
-            Json::Dict(x) => !x.is_empty()
+            Json::Number(n) => n.to_string(),
+            Json::Boolean(b) => b.to_string(),
+            Json::String(s) => format!("{:?}", s.to_string()),
+            Json::List(list) => {
+                let inner: Vec<_> = list.iter().map(Json::as_json).collect();
+                format!("[{}]", inner.join(", ")).to_owned()
+            }
+            Json::Dict(dict) => {
+                let inner: Vec<_> = dict
+                    .iter()
+                    .map(|(key, value)| format!("\"{key}\": {}", value.as_json()))
+                    .collect();
+                format!("{{ {} }}", inner.join(", ")).to_owned()
+            }
         }
+    }
+}
+
+impl From<i64> for Json {
+    fn from(value: i64) -> Self {
+        Self::Number(value)
     }
 }
 
 impl From<bool> for Json {
     fn from(value: bool) -> Self {
-        Json::Boolean(value.force_fit())
+        Self::Boolean(value)
     }
 }
 
-// #[cfg(not(feature = "macro"))]
-pub fn parse(tokens: &str) -> Result<Json, NodeError> {
-    Ok(parse_string(tokens)?.fit()?)
-}
-
-fn parse_string(tokens: &str) -> Result<Interpolatable<Json>, NodeError> {
-    
-    let tokens = tokens.trim();
-    
-    match tokens.chars().peekable().peek() {
-        None => Err(NodeError::Parsing),
-        Some(c) => match c {
-            '[' => Ok(parse_list(tokens)?),
-            '$' => parse_interpolation(tokens),
-            _ => match tokens {
-                "true" => Ok(Json::Boolean(true.force_fit()).fit()?),
-                "false" => Ok(Json::Boolean(false.force_fit()).fit()?),
-                _ => Err(NodeError::Parsing)
-            },
-        },
+impl From<&str> for Json {
+    fn from(value: &str) -> Self {
+        Self::String(value.to_owned())
     }
 }
 
-fn parse_list(tokens: &str) -> Result<Interpolatable<Json>, NodeError> {
-   let tokens = tokens.strip_prefix("[").ok_or(NodeError::Parsing)?;
-   let tokens = tokens.strip_suffix("]").ok_or(NodeError::Parsing)?;
-
-   let inner: Result<Vec<_>, _> = tokens.split(",").map(parse_string).collect();
-   let result: Interpolatable<Vec<_>> = inner?.into();
-   Ok(Json::List(result.fit()?).fit()?)
+#[cfg(not(feature = "macro"))]
+impl<T> From<Vec<T>> for Json
+where
+    T: Into<Json>,
+{
+    fn from(value: Vec<T>) -> Self {
+        Self::List(value.into_iter().map(|x| x.into()).collect::<Vec<Json>>())
+    }
 }
 
-fn parse_interpolation(tokens: &str) -> Result<Interpolatable<Json>, NodeError> {
-    let tokens = tokens.strip_prefix("$").ok_or(NodeError::Parsing)?;
-    Ok(Interpolatable::<Json>::Inter(syn::parse_str::<TokenTree>(tokens)?))
+#[derive(Debug)]
+pub enum JsonError {
+    Syntax,
+    RuntimeInterpolation(RuntimeInterpolationError),
 }
 
-pub struct PartialTuple(
-    u64,
-    #[cfg(feature = "macro")] Interpolatable<bool>,
-    #[cfg(not(feature = "macro"))] bool,
-);
+impl From<RuntimeInterpolationError> for JsonError {
+    fn from(value: RuntimeInterpolationError) -> Self {
+        JsonError::RuntimeInterpolation(value)
+    }
+}
+
+#[cfg(not(feature = "macro"))]
+pub fn parse(input: &str) -> Result<Json, JsonError> {
+    use nom::combinator::all_consuming;
+
+    let (_, parsed) = all_consuming(parse_json_node)(input).map_err(|_| JsonError::Syntax)?;
+
+    Ok(parsed.fit()?)
+}
+
+pub fn parse_json_node(i: &str) -> IResult<&str, Interpolatable<Json>> {
+    let (i, _) = whitespace(i)?;
+    alt((
+        parse_interpolation,
+        parse_dict,
+        parse_list,
+        parse_number,
+        parse_string,
+    ))(i)
+}
+
+fn parse_number(i: &str) -> IResult<&str, Interpolatable<Json>> {
+    let (i, number) = map_res(digit1, str::parse)(i)?;
+
+    Ok((i, Interpolatable::Actual(Json::Number(number))))
+}
+
+fn parse_string(i: &str) -> IResult<&str, Interpolatable<Json>> {
+    let (i, _) = char('"')(i)?;
+    let (i, number) = alphanumeric0(i)?;
+    let (i, _) = char('"')(i)?;
+
+    Ok((i, Json::String(number.to_owned()).interpolate()))
+}
+
+fn parse_interpolation(i: &str) -> IResult<&str, Interpolatable<Json>> {
+    let (i, _) = char('$')(i)?;
+    let (i, _) = whitespace(i)?;
+    let (i, tree) = delimited(char('{'), take_until_unbalanced('{', '}'), char('}'))(i)?;
+    let (i, _) = whitespace(i)?;
+
+    let tree = struct_baker::util::parse_str(tree).expect("syntax error");
+
+    Ok((i, Interpolatable::Inter(tree)))
+}
+
+fn parse_list(i: &str) -> IResult<&str, Interpolatable<Json>> {
+    let (i, list) = delimited(
+        char('['),
+        separated_list0(char(','), parse_json_node),
+        char(']'),
+    )(i)?;
+
+    Ok((i, Json::List(list.flatten_interpolation().nom(i)?).interpolate()))
+}
+
+fn parse_dict(i: &str) -> IResult<&str, Interpolatable<Json>> {
+    let (i, dict) = delimited(
+        char('{'),
+        separated_list0(char(','), parse_dict_entry),
+        char('}'),
+    )(i)?;
+
+    // Do not use `flatten_interpolation()` so we do not need to construct another Hashmap first
+    let dict: Interpolatable<HashMap<String, Json>> = dict.into_iter().collect();
+
+    Ok((i, Json::Dict(dict.nom(i)?).interpolate()))
+}
+
+fn parse_dict_entry(i: &str) -> IResult<&str, Interpolatable<(String, Json)>> {
+    let (i, _) = whitespace(i)?;
+    let (i, _) = char('"')(i)?;
+    let (i, key) = alphanumeric1(i)?;
+    let (i, _) = char('"')(i)?;
+    let (i, _) = whitespace(i)?;
+    let (i, _) = char(':')(i)?;
+    let (i, _) = whitespace(i)?;
+    let (i, value) = parse_json_node(i)?;
+    let (i, _) = whitespace(i)?;
+
+    let pair = (key.to_owned().interpolate(), value).flatten_interpolation();
+
+    Ok((i, pair))
+}
+
+fn whitespace(i: &str) -> IResult<&str, ()> {
+    let (i, _) = many0(alt((char(' '), char('\t'), char('\n'))))(i)?;
+    Ok((i, ()))
+}
+
+#[test]
+fn test() {
+    // let x =
+    //     parse_json_node("{\"liste\" : ${ { let x = 10 ; x } }}").unwrap();
+
+    let i = "{\n\"a\" : 10, \"lol\" : 10}";
+
+    let x = parse(i).unwrap();
+    println!("{:?}", x);
+}

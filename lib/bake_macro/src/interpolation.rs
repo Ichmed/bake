@@ -126,7 +126,7 @@ fn interpolate_named_field(field: Field, interpolate_all: bool) -> proc_macro2::
         quote! {
             #(#attrs)*
             #[cfg(feature = "macro")]
-            #vis #ident : bake::interpolation::Interpolatable<#ty>,
+            #vis #ident : struct_baker::interpolation::Interpolatable<#ty>,
             #[cfg(not(feature = "macro"))]
             #vis #ident : #ty,
         }
@@ -147,7 +147,7 @@ fn interpolate_unnamed_field(field: Field, interpolate_all: bool) -> proc_macro2
         quote! {
             #(#attrs)*
             #[cfg(feature = "macro")]
-            #vis bake::interpolation::Interpolatable<#ty>,
+            #vis struct_baker::interpolation::Interpolatable<#ty>,
             #[cfg(not(feature = "macro"))]
             #vis #ty,
         }

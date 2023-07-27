@@ -56,8 +56,8 @@ pub fn generate_impl(derive_input: DeriveInput) -> proc_macro2::TokenStream {
 
 
     quote! {
-        impl #generics bake::Bake for #ident #generics {
-            fn to_stream(&self) -> bake::util::TokenStream {
+        impl #generics struct_baker::Bake for #ident #generics {
+            fn to_stream(&self) -> struct_baker::util::TokenStream {
                 let object = self;
                 #imp.into()
             }
@@ -76,7 +76,7 @@ fn inplace_struct(ident: &Ident, alias: Option<Path>, data: DataStruct) -> proc_
                 let #ident #destructured = object;
 
                 #conversion
-                bake::util::quote!(
+                struct_baker::util::quote!(
                     #alias #restructured
                 )
             )   
@@ -86,10 +86,10 @@ fn inplace_struct(ident: &Ident, alias: Option<Path>, data: DataStruct) -> proc_
 
             quote!(
                 let #ident #destructured = object;
-                let #path: bake::util::Path = bake::util::parse_str(module_path!()).unwrap();
+                let #path: struct_baker::util::Path = struct_baker::util::parse_str(module_path!()).unwrap();
 
                 #conversion
-                bake::util::quote!(
+                struct_baker::util::quote!(
                     ##path :: #ident #restructured
                 )
             )            
@@ -162,7 +162,7 @@ fn field_conversion((index, field): (usize, &Field)) -> proc_macro2::TokenStream
     if let Some(alias) = bake_as.clone() {
         if field.ty == Type::Path(TypePath { qself: None, path: alias }) {
             let u = &field.ty;
-            return quote!(let #ident = bake::util::quote!(#u););
+            return quote!(let #ident = struct_baker::util::quote!(#u););
         }
     }
 
@@ -214,7 +214,7 @@ fn enum_variants(ident: &Ident, alias: Option<Path>, data: &DataEnum) -> Vec<pro
                     Self :: #var_ident #destructured => {
                         #conversion
     
-                        bake::util::quote!(#alias :: #var_ident #restructured)
+                        struct_baker::util::quote!(#alias :: #var_ident #restructured)
                     }                
 
                 },
@@ -223,9 +223,9 @@ fn enum_variants(ident: &Ident, alias: Option<Path>, data: &DataEnum) -> Vec<pro
                     quote! {
                         Self :: #var_ident #destructured => {
                             #conversion
-                            let #path: bake::util::Path = bake::util::parse_str(module_path!()).unwrap();
+                            let #path: struct_baker::util::Path = struct_baker::util::parse_str(module_path!()).unwrap();
 
-                            bake::util::quote!(##path :: #ident :: #var_ident #restructured)
+                            struct_baker::util::quote!(##path :: #ident :: #var_ident #restructured)
                         }
                     }
                 },
