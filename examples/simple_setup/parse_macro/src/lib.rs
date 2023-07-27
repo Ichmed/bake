@@ -6,7 +6,14 @@ use lib::json::parse_json_node;
 #[proc_macro]
 pub fn json(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
 
-    let inner = parse_json_node(&input.to_string()).unwrap().1.bake();
+    let input = input.to_string();
+    let (rest, inner) = parse_json_node(&input).unwrap();
+
+    if rest != "" {
+        panic!("Unknown syntax {rest}")
+    }
+
+    let inner = inner.bake();
 
     bake::util::quote!(#inner).into()
 }

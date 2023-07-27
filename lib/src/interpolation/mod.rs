@@ -9,10 +9,13 @@ use proc_macro2::{TokenStream, TokenTree};
 use quote::{quote, ToTokens};
 use syn::{parse2, parse_quote};
 
-use crate::{Bake, Bakeable, functions::BakeableFnOnce};
+use crate::{functions::BakeableFnOnce, Bake, Bakeable};
 
-pub mod ops;
 pub mod helper;
+pub mod ops;
+mod flatten;
+
+pub use flatten::*;
 
 #[derive(Debug, Clone)]
 pub enum Interpolatable<T> {
@@ -27,7 +30,7 @@ impl<T> Interpolatable<T> {
     }
 
     /// Uses the TokenTree as-is for interpolation
-    /// 
+    ///
     /// You have to take care of type conversion manually
     pub fn new_inter_raw(tree: TokenTree) -> Self {
         Self::Inter(parse_quote!(#tree.into()))
@@ -74,11 +77,22 @@ pub trait Interpolate<T> {
     fn fit(self) -> Result<T, RuntimeInterpolationError>;
 
     ///Panics: If T can not be transformed
-    fn force_fit(self) -> T 
+    fn force_fit(self) -> T
     where
-        Self: Sized
+        Self: Sized,
     {
         self.fit().expect("Interpolated during runtime")
+    }
+
+    #[cfg(feature = "nom")]
+    /// Performs [fit] but will map [RuntimeInterpolationError] to nom::Err::Failure
+    fn nom<I>(self, input: I) -> Result<T, nom::Err<nom::error::Error<I>>>
+    where
+        Self: Sized,
+    {
+        self.fit().map_err(|_| {
+            nom::Err::Failure(nom::error::Error::new(input, nom::error::ErrorKind::Fail))
+        })
     }
 }
 
@@ -173,7 +187,7 @@ impl<B: Bake> From<Vec<Interpolatable<B>>> for Interpolatable<Vec<B>> {
                         result = Some(v);
                     }
                     result.as_mut().unwrap().push(tree);
-                },
+                }
                 Actual(item) => match result.as_mut() {
                     Some(vec) => vec.push(item.to_token_tree()),
                     None => visited.push(item),
@@ -182,14 +196,15 @@ impl<B: Bake> From<Vec<Interpolatable<B>>> for Interpolatable<Vec<B>> {
         }
 
         match result {
-            Some(list) => Inter(parse_quote!({vec![#(#list.into(),)*]})),
+            Some(list) => Inter(parse_quote!({ vec![#(#list.into(),)*] })),
             None => Actual(visited),
         }
     }
 }
 
-impl<B: Bake, Collection: FromIterator<B>> FromIterator<Interpolatable<B>> for Interpolatable<Collection> {
-    
+impl<B: Bake, Collection: FromIterator<B>> FromIterator<Interpolatable<B>>
+    for Interpolatable<Collection>
+{
     fn from_iter<T: IntoIterator<Item = Interpolatable<B>>>(iter: T) -> Self {
         let iter = iter.into_iter();
         let mut visited: Vec<B> = Vec::with_capacity(iter.size_hint().1.unwrap_or_default());
@@ -206,7 +221,7 @@ impl<B: Bake, Collection: FromIterator<B>> FromIterator<Interpolatable<B>> for I
                         result = Some(v);
                     }
                     result.as_mut().unwrap().push(parse_quote!({#tree.into()}));
-                },
+                }
                 Actual(item) => match result.as_mut() {
                     Some(vec) => vec.push(item.to_token_tree()),
                     None => visited.push(item),
@@ -236,7 +251,7 @@ impl<T: Bake> Interpolatable<T> {
             Inter(tree) => {
                 let function_path = f.bake();
                 Inter(parse2(quote!(#function_path(#tree.into()))).unwrap())
-            },
+            }
         }
     }
 

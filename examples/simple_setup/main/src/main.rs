@@ -7,7 +7,7 @@ fn main() {
     let nested = json!(
         {
             "a": 10,
-            "b": 10
+            "b": ${10}
         }
     );
 
